@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBridge, MIB } from "../src/bridge.mjs";
 import { FileCache, sha256 } from "../src/cache.mjs";
-import { DeepSeekFilesPlugin, DeepSeekFilesOtoPlugin, DeepSeekFilesMePlugin } from "../index.mjs";
+import { DeepSeekFilesOnePlugin, DeepSeekFilesOtoPlugin, DeepSeekFilesMePlugin } from "../index.mjs";
 import { importMagpieKey, manualModelIDs } from "../src/paths.mjs";
 import { discoverModels, readBalance } from "../src/models.mjs";
 import { unicodeNullEscape } from "../src/compat.mjs";
@@ -204,13 +204,13 @@ test("over-48-MiB image request becomes small without deleting any images", asyn
 });
 
 test("native plugin advertises Responses and imports only an official configured key", async t => {
-  const s = await setup(t), hooks = await DeepSeekFilesPlugin(), config = {};
+  const s = await setup(t), hooks = await DeepSeekFilesOnePlugin(), config = {};
   await hooks.config(config);
-  assert.equal(hooks.auth.provider, "deepseek-files");
+  assert.equal(hooks.auth.provider, "deepseek-files-one");
   assert.match(hooks.auth.icon, /^data:image\/svg\+xml;base64,/);
   assert.match(Buffer.from(hooks.auth.icon.split(",")[1], "base64").toString(), /<title>DeepSeek<\/title>/);
-  assert.equal(config.provider["deepseek-files"].npm, "@ai-sdk/openai");
-  assert.ok(config.provider["deepseek-files"].models["deepseek-flash"].modalities.input.includes("image"));
+  assert.equal(config.provider["deepseek-files-one"].npm, "@ai-sdk/openai");
+  assert.ok(config.provider["deepseek-files-one"].models["deepseek-flash"].modalities.input.includes("image"));
   await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek", key: "local-key", responses: "https://api.deepseek.com/v1" }] }));
   assert.equal(await importMagpieKey(s.directory), "local-key");
   await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek", key: "local-key", responses: "https://relay.example/v1" }] }));
@@ -244,17 +244,17 @@ test("entry exports one callable plugin per routed DeepSeek account", async () =
   const entry = await import("../index.mjs");
   assert.deepEqual(
     Object.entries(entry).filter(([, value]) => typeof value === "function").map(([name]) => name),
-    ["DeepSeekFilesMePlugin", "DeepSeekFilesOtoPlugin", "DeepSeekFilesPlugin"],
+    ["DeepSeekFilesMePlugin", "DeepSeekFilesOnePlugin", "DeepSeekFilesOtoPlugin"],
   );
 });
 
-const discoveryProvider = () => ({ id: "deepseek-files", api: "https://api.deepseek.com/v1", npm: "@ai-sdk/openai",
+const discoveryProvider = () => ({ id: "deepseek-files-one", api: "https://api.deepseek.com/v1", npm: "@ai-sdk/openai",
   models: { removed: { name: "Old model" }, "deepseek-flash": { limit: { context: 1000000 }, cost: { input: 0.3, output: 1.2 } } } });
 const discoveryAuth = { auth: { type: "api", key: "private-discovery-key" }, catalog: {} };
 
 test("model hook lists every official ID, removes disappeared IDs and maps exact metadata", async () => {
-  const hooks = await DeepSeekFilesPlugin();
-  assert.equal(hooks.provider.id, "deepseek-files");
+  const hooks = await DeepSeekFilesOnePlugin();
+  assert.equal(hooks.provider.id, "deepseek-files-one");
   assert.equal(typeof hooks.provider.models, "function");
   const models = await discoverModels(discoveryProvider(), discoveryAuth, async (url, init) => {
     assert.equal(url, "https://api.deepseek.com/models");
@@ -288,9 +288,9 @@ test("signed-out discovery uses offline bootstrap without any network call", asy
   const provider = discoveryProvider();
   assert.equal(await discoverModels(provider, {}, () => { throw new Error("must not fetch"); }), provider.models);
   const config = {};
-  await (await DeepSeekFilesPlugin()).config(config);
-  assert.deepEqual(Object.keys(config.provider["deepseek-files"].models), ["deepseek-flash", "deepseek-v4-pro"]);
-  assert.equal(config.provider["deepseek-files"].models["deepseek-v4-pro"].attachment, false);
+  await (await DeepSeekFilesOnePlugin()).config(config);
+  assert.deepEqual(Object.keys(config.provider["deepseek-files-one"].models), ["deepseek-flash", "deepseek-v4-pro"]);
+  assert.equal(config.provider["deepseek-files-one"].models["deepseek-v4-pro"].attachment, false);
 });
 
 test("discovery failures are explicit, sanitized, and do not mutate existing metadata", async () => {
@@ -322,7 +322,7 @@ test("minimal model metadata does not invent vision or reasoning for new IDs", a
 });
 
 test("usage hook reads the account's official multi-currency balance, including zero", async () => {
-  assert.equal(typeof (await DeepSeekFilesPlugin()).auth.usage, "function");
+  assert.equal(typeof (await DeepSeekFilesOnePlugin()).auth.usage, "function");
   const result = await readBalance(async () => discoveryAuth.auth, async (url, init) => {
     assert.equal(url, "https://api.deepseek.com/user/balance");
     assert.equal(init.headers.authorization, "Bearer private-discovery-key");
@@ -364,8 +364,8 @@ test("Chat max_completion_tokens and none thinking match DeepSeek's native field
 
 test("native search is declared, and normal upstream failures keep status, headers and body", async t => {
   const config = {};
-  await (await DeepSeekFilesPlugin()).config(config);
-  assert.equal(config.provider["deepseek-files"].searches, true);
+  await (await DeepSeekFilesOnePlugin()).config(config);
+  assert.equal(config.provider["deepseek-files-one"].searches, true);
   for (const status of [401, 402, 403, 429, 500, 503]) {
     const upstream = Response.json({ error: { message: "original refusal" } }, { status, headers: { "retry-after": "42", "x-request-id": "request-123" } });
     const s = await setup(t, () => upstream);
@@ -425,7 +425,7 @@ test("usage RPC communicates invalid credentials explicitly but does not misclas
 test("portable Magpie uses the directory passed by its host for auth import and catalog", async t => {
   const s = await setup(t);
   await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek", key: "portable-key", anthropic: "https://api.deepseek.com/anthropic" }] }));
-  const hooks = await DeepSeekFilesPlugin({ magpie: {}, directory: s.directory });
+  const hooks = await DeepSeekFilesOnePlugin({ magpie: {}, directory: s.directory });
   const login = await hooks.auth.methods[1].authorize();
   assert.equal((await login.callback()).key, "portable-key");
   await mkdir(join(s.directory, "cache"));
@@ -433,23 +433,23 @@ test("portable Magpie uses the directory passed by its host for auth import and 
   assert.equal((await nativeCatalog(s.directory))["deepseek-flash"].cost.input, 7);
   const config = {};
   await hooks.config(config);
-  assert.equal(config.provider["deepseek-files"].models["deepseek-flash"].cost.input, 7);
+  assert.equal(config.provider["deepseek-files-one"].models["deepseek-flash"].cost.input, 7);
   await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek", key: "portable-key", chat: "https://api.deepseek.com/v1", anthropic: "https://thirdparty.example/anthropic" }] }));
   await assert.rejects(importMagpieKey(s.directory), /official/);
 });
 
 test("explicit manual model IDs survive discovery, while withdrawn fetched IDs are not resurrected", async t => {
   const s = await setup(t);
-  await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek-files", models: ["removed-official", "manual-alias"], pickedFrom: ["removed-official"] }] }));
-  assert.deepEqual(await manualModelIDs(s.directory, "deepseek-files"), ["manual-alias"]);
-  await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek-files", models: ["manual-alias"], pickedFrom: ["manual-alias"] }] }));
-  assert.deepEqual(await manualModelIDs(s.directory, "deepseek-files"), ["manual-alias"], "a full refresh must not forget an explicit manual model");
+  await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek-files-one", models: ["removed-official", "manual-alias"], pickedFrom: ["removed-official"] }] }));
+  assert.deepEqual(await manualModelIDs(s.directory, "deepseek-files-one"), ["manual-alias"]);
+  await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek-files-one", models: ["manual-alias"], pickedFrom: ["manual-alias"] }] }));
+  assert.deepEqual(await manualModelIDs(s.directory, "deepseek-files-one"), ["manual-alias"], "a full refresh must not forget an explicit manual model");
   const provider = discoveryProvider();
   provider.models["manual-alias"] = { name: "Manual", capabilities: { reasoning: true }, variants: { low: {} }, limit: { context: 123456 } };
   const models = await discoverModels(provider, { ...discoveryAuth, manualModels: { "manual-alias": {} } }, async () => Response.json({ data: [{ id: "deepseek-flash" }] }));
   assert.deepEqual(Object.keys(models), ["deepseek-flash", "manual-alias"]);
   assert.equal(models["manual-alias"].api.id, "manual-alias");
   assert.equal(models["manual-alias"].limit.context, 123456);
-  await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek-files", models: [], pickedFrom: ["manual-alias"] }] }));
-  assert.deepEqual(await manualModelIDs(s.directory, "deepseek-files"), []);
+  await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek-files-one", models: [], pickedFrom: ["manual-alias"] }] }));
+  assert.deepEqual(await manualModelIDs(s.directory, "deepseek-files-one"), []);
 });

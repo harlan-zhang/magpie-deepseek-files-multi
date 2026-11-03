@@ -5,9 +5,9 @@ import { configDirectory, importMagpieKey, manualModelIDs } from "./src/paths.mj
 import { DEFAULT_MODELS, discoverModels, readBalance } from "./src/models.mjs";
 import { nativeCatalog, runtimeCost } from "./src/catalog.mjs";
 
-export const PROVIDER_ID = "deepseek-files";
+export const PROVIDER_ID = "deepseek-files-one";
 export const PROVIDER_IDS = [
-  "deepseek-files",
+  "deepseek-files-one",
   "deepseek-files-oto",
   "deepseek-files-me",
 ];
@@ -16,8 +16,8 @@ const icon = "data:image/svg+xml;base64," + readFileSync(new URL("./assets/deeps
 
 const PROVIDER_SPECS = [
   {
-    id: "deepseek-files",
-    name: "DeepSeek Files Bridge",
+    id: "deepseek-files-one",
+    name: "DeepSeek Files ONE",
     keyLabel: "ONE",
     importFrom: "deepseek",
   },
@@ -115,7 +115,7 @@ async function makeHooks(spec, input = {}) {
   };
 }
 
-export async function DeepSeekFilesPlugin(input = {}) {
+export async function DeepSeekFilesOnePlugin(input = {}) {
   return makeHooks(PROVIDER_SPECS[0], input);
 }
 

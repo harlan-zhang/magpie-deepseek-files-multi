@@ -6,13 +6,13 @@ Magpie 原生提供商插件：将内联图片上传至 DeepSeek Files API，缓
 
 | provider | Key |
 | --- | --- |
-| `deepseek-files` | ONE（兼容旧配置） |
+| `deepseek-files-one` | ONE |
 | `deepseek-files-oto` | OTO |
 | `deepseek-files-me` | Me |
 
 这样 Magpie 路由到哪个 provider，就用该 provider 自己的 Key 上传图片并做推理；上传和模型调用不会跨 Key。不要再把多个 Key 都塞进同一个 provider 作为普通账号，那种方式只会按“主账号优先、耗尽后接管”工作。
 
-**无需独立代理、无需修改 Magpie 二进制，也不会删除本地图片或聊天记录。** 插件新增提供商 `deepseek-files`，原来的 `deepseek` 提供商保持不变。
+**无需独立代理、无需修改 Magpie 二进制，也不会删除本地图片或聊天记录。** 插件新增三个提供商，原来的官方 `deepseek` 提供商保持不变。
 
 **0.3.0 已完成内置 DeepSeek 能力对照核查**：三种客户端协议、思考工具回放、namespace / custom 工具、JSON、视觉、官方 Pro 搜索、价格目录、余额与路由状态。完整证据和宿主限制见 [核对表](docs/PARITY.md)。
 
@@ -24,7 +24,7 @@ Magpie 原生提供商插件：将内联图片上传至 DeepSeek Files API，缓
 
 ```sh
 magpie plugin add /path/to/magpie-deepseek-files-multi
-magpie plugin login deepseek-files
+magpie plugin login deepseek-files-one
 magpie plugin login deepseek-files-oto
 magpie plugin login deepseek-files-me
 ```
@@ -36,14 +36,14 @@ magpie plugin login deepseek-files-me
 
 对应的导入来源：
 
-- `deepseek-files` ← Magpie `deepseek`（ONE）
+- `deepseek-files-one` ← Magpie `deepseek`（ONE）
 - `deepseek-files-oto` ← Magpie `oto`
 - `deepseek-files-me` ← Magpie `deepseek-me`
 
 然后在 Codex / Magpie 模型选择器中选择：
 
 ```text
-deepseek-files/deepseek-flash
+deepseek-files-one/deepseek-flash
 deepseek-files-oto/deepseek-flash
 deepseek-files-me/deepseek-flash
 ```
@@ -52,7 +52,7 @@ deepseek-files-me/deepseek-flash
 
 ```sh
 magpie group set auto/deepseek-flash \
-  models=deepseek-files-oto/deepseek-flash,deepseek-files/deepseek-flash,deepseek-files-me/deepseek-flash \
+  models=deepseek-files-oto/deepseek-flash,deepseek-files-one/deepseek-flash,deepseek-files-me/deepseek-flash \
   routing=smart stays=auto
 ```
 
@@ -62,7 +62,7 @@ magpie group set auto/deepseek-flash \
 
 ## 内置 OpenCode Go DeepSeek 与路由组图片压缩（0.5.1）
 
-插件在 Magpie 网关路由前压缩图片，直接使用内置 `opencode-go/deepseek-v4.1-flash`；不新增 Go 供应商，不接管登录、模型目录、路由或上游传输。原有官方 `deepseek-files` 文件适配保持不变。
+插件在 Magpie 网关路由前压缩图片，直接使用内置 `opencode-go/deepseek-v4.1-flash`；不新增 Go 供应商，不接管登录、模型目录、路由或上游传输。原有 `deepseek-files-one` / `deepseek-files-oto` / `deepseek-files-me` 文件适配保持不变。
 
 安装或更新后给图片处理留出宿主允许的最多 10 秒时间：
 
@@ -83,7 +83,7 @@ magpie plugin options magpie-deepseek-files-multi '{"gatewayTimeoutMs":10000}'
 从 **0.2.0** 起，登录后通过 `GET https://api.deepseek.com/models` 获取该 key 可用的全部官方模型。“重新获取模型”及以下命令都会重新询问官方接口：
 
 ```sh
-magpie provider refresh deepseek-files
+magpie provider refresh deepseek-files-one
 ```
 
 模型名、准确的上下文窗口、最大输出、输入/输出模态和推理档位使用官方返回值；新模型无需升级插件即可出现在供应商列表中，用户的已选模型仍由 Magpie 管理。官方下架的 ID 不会被静态列表加回来。接口失败时由 Magpie 保留上次成功的列表并显示获取失败；401 标记登录失效，403、限流及临时故障不会误注销账号。
@@ -95,8 +95,8 @@ magpie provider refresh deepseek-files
 开发安装也支持本地路径：
 
 ```sh
-git clone https://github.com/disturbwe/magpie-deepseek-files.git
-magpie plugin add ./magpie-deepseek-files
+git clone <this-fork-url> magpie-deepseek-files-multi
+magpie plugin add ./magpie-deepseek-files-multi
 ```
 
 ## 工作方式
@@ -192,14 +192,14 @@ node scripts/gateway-smoke.mjs --rollout /path/to/local-rollout.jsonl
 
 ```sh
 magpie plugin update
-magpie plugin rm magpie-deepseek-files
+magpie plugin rm /path/to/magpie-deepseek-files-multi
 ```
 
 卸载后选回原 `deepseek/deepseek-flash`。磁盘缓存可手动删除；已上传文件在设置的 7 天期限内自动过期。不要在公开 issue 中粘贴 API key、`plugin-auth.json` 或完整聊天记录。
 
 ## English
 
-A native Magpie/OpenCode provider plugin that replaces inline DeepSeek images with cached Files API references. Images within budget are unchanged; over-budget requests use lossless compression first, then adaptive historical downscaling with recent images prioritized. If needed, the oldest image blocks are replaced with explicit omission markers to meet size/count limits. Text, tool pairs, streaming, cancellation and local history are retained. Files expire after seven days. Image processing uses Sharp. Select `deepseek-files/deepseek-flash` after installing and signing in. No standalone proxy or binary patch is required.
+A native Magpie/OpenCode provider plugin that replaces inline DeepSeek images with cached Files API references. This fork registers one provider per DeepSeek key: `deepseek-files-one`, `deepseek-files-oto`, and `deepseek-files-me`, so the key used for Files API uploads is the same key used for inference. Images within budget are unchanged; over-budget requests use lossless compression first, then adaptive historical downscaling with recent images prioritized. Text, tool pairs, streaming, cancellation and local history are retained. Image processing uses Sharp. No standalone proxy or binary patch is required.
 
 ## 图标来源
 
