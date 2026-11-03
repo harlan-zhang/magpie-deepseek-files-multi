@@ -52,7 +52,7 @@ deepseek-files-me/deepseek-flash
 
 ```sh
 magpie group set auto/deepseek-flash \
-  models=deepseek-files/deepseek-flash,deepseek-files-oto/deepseek-flash,deepseek-files-me/deepseek-flash \
+  models=deepseek-files-oto/deepseek-flash,deepseek-files/deepseek-flash,deepseek-files-me/deepseek-flash \
   routing=smart stays=auto
 ```
 
