@@ -26,15 +26,15 @@ export async function manualModelIDs(directory, providerID) {
   return ids;
 }
 
-export async function importMagpieKey(directory = configDirectory()) {
+export async function importMagpieKey(directory = configDirectory(), providerID = "deepseek") {
   let saved;
   try { saved = JSON.parse(await readFile(join(directory, "providers.json"), "utf8")); }
   catch { throw new Error("Cannot read Magpie providers.json. Sign in using the API key method instead."); }
-  const provider = saved.providers?.find(p => p.id === "deepseek");
+  const provider = saved.providers?.find(p => p.id === providerID);
   const endpoints = [provider?.chat, provider?.responses, provider?.anthropic].filter(Boolean);
   if (!provider || !endpoints.length || !endpoints.every(x => {
     try { return new URL(x).origin === API; } catch { return false; }
-  })) throw new Error("Import requires an existing official api.deepseek.com provider named deepseek.");
+  })) throw new Error(`Import requires an existing official api.deepseek.com provider named ${providerID}.`);
   const selected = provider.keys?.find(k => typeof k === "string" || !k.off);
   const key = provider.key || (typeof selected === "string" ? selected : selected?.key);
   if (typeof key !== "string" || !key) throw new Error("No DeepSeek API key found. Use the API key method instead.");

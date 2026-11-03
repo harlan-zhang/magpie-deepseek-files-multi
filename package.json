@@ -1,7 +1,7 @@
 {
-  "name": "magpie-deepseek-files",
-  "version": "0.5.1",
-  "description": "Native Magpie provider plugin: DeepSeek file references and adaptive image budgeting.",
+  "name": "magpie-deepseek-files-multi",
+  "version": "0.6.0",
+  "description": "Native Magpie provider plugin: one DeepSeek Files provider per API key, so image uploads and inference use the routed key.",
   "type": "module",
   "main": "./index.mjs",
   "exports": "./index.mjs",
@@ -29,10 +29,6 @@
     "files-api"
   ],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/disturbwe/magpie-deepseek-files.git"
-  },
   "magpie": {
     "hooks": "./src/opencode.hooks.mjs",
     "icon": "https://raw.githubusercontent.com/disturbwe/magpie-deepseek-files/main/assets/deepseek.svg"

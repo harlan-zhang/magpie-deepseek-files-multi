@@ -1,6 +1,16 @@
-# DeepSeek Files Bridge
+# DeepSeek Files Bridge（多 Key 路由版）
 
 Magpie 原生提供商插件：将内联图片上传至 DeepSeek Files API，缓存文件引用，解决长图片会话先触发 HTTP 413 或图片总量超限的问题。
+
+**本分支的核心差异：每个 DeepSeek Key 是一个独立 provider。**
+
+| provider | Key |
+| --- | --- |
+| `deepseek-files` | ONE（兼容旧配置） |
+| `deepseek-files-oto` | OTO |
+| `deepseek-files-me` | Me |
+
+这样 Magpie 路由到哪个 provider，就用该 provider 自己的 Key 上传图片并做推理；上传和模型调用不会跨 Key。不要再把多个 Key 都塞进同一个 provider 作为普通账号，那种方式只会按“主账号优先、耗尽后接管”工作。
 
 **无需独立代理、无需修改 Magpie 二进制，也不会删除本地图片或聊天记录。** 插件新增提供商 `deepseek-files`，原来的 `deepseek` 提供商保持不变。
 
@@ -13,22 +23,42 @@ Magpie 原生提供商插件：将内联图片上传至 DeepSeek Files API，缓
 需要支持 OpenCode 提供商插件的 Magpie。已在 Windows Magpie **0.1.1282**、Bun **1.4.3** 中验证。
 
 ```sh
-magpie plugin add github:disturbwe/magpie-deepseek-files
+magpie plugin add /path/to/magpie-deepseek-files-multi
 magpie plugin login deepseek-files
+magpie plugin login deepseek-files-oto
+magpie plugin login deepseek-files-me
 ```
 
-登录时选择：
+登录每个 provider 时选择：
 
 1. **DeepSeek API key**：输入自己的官方 API key。
-2. **Import existing Magpie DeepSeek API key**：从本机 Magpie 的官方 `deepseek` 提供商导入现有 key，不显示 key、不修改原提供商。
+2. **Import existing Magpie DeepSeek API key**：从本机 Magpie 对应的官方 provider 导入 key，不显示 key、不修改原提供商。
+
+对应的导入来源：
+
+- `deepseek-files` ← Magpie `deepseek`（ONE）
+- `deepseek-files-oto` ← Magpie `oto`
+- `deepseek-files-me` ← Magpie `deepseek-me`
 
 然后在 Codex / Magpie 模型选择器中选择：
 
 ```text
 deepseek-files/deepseek-flash
+deepseek-files-oto/deepseek-flash
+deepseek-files-me/deepseek-flash
 ```
 
-**只有选择这个提供商才会启用文件适配。** 继续选择 `deepseek/deepseek-flash`，或路由组中仍指向原提供商的成员，仍使用原来的发送路径。需要时将相应组成员改成 `deepseek-files/deepseek-flash`。
+也可以把它们放进同一个路由组，例如：
+
+```sh
+magpie group set auto/deepseek-flash \
+  models=deepseek-files/deepseek-flash,deepseek-files-oto/deepseek-flash,deepseek-files-me/deepseek-flash \
+  routing=smart stays=auto
+```
+
+组的 smart 路由选到哪个 provider，就使用哪个 provider 的 Key；如果使用 `routing=rotate`，则会按轮次更换 provider，每个请求内部仍然是同一个 Key。
+
+继续选择 `deepseek/deepseek-flash`，或路由组中仍指向原官方 provider 的成员，仍使用原来的发送路径。
 
 ## 内置 OpenCode Go DeepSeek 与路由组图片压缩（0.5.1）
 
@@ -37,7 +67,7 @@ deepseek-files/deepseek-flash
 安装或更新后给图片处理留出宿主允许的最多 10 秒时间：
 
 ```sh
-magpie plugin options magpie-deepseek-files '{"gatewayTimeoutMs":10000}'
+magpie plugin options magpie-deepseek-files-multi '{"gatewayTimeoutMs":10000}'
 ```
 
 然后在内置 OpenCode Go 中选择 DeepSeek。无需额外登录；key、订阅计费和流式传输均由 Magpie 原生入口负责。

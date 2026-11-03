@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBridge, MIB } from "../src/bridge.mjs";
 import { FileCache, sha256 } from "../src/cache.mjs";
-import { DeepSeekFilesPlugin } from "../index.mjs";
+import { DeepSeekFilesPlugin, DeepSeekFilesOtoPlugin, DeepSeekFilesMePlugin } from "../index.mjs";
 import { importMagpieKey, manualModelIDs } from "../src/paths.mjs";
 import { discoverModels, readBalance } from "../src/models.mjs";
 import { unicodeNullEscape } from "../src/compat.mjs";
@@ -217,6 +217,22 @@ test("native plugin advertises Responses and imports only an official configured
   await assert.rejects(importMagpieKey(s.directory), /official/);
   await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [{ id: "deepseek", key: "local-key" }] }));
   await assert.rejects(importMagpieKey(s.directory), /official/);
+
+  const oto = await DeepSeekFilesOtoPlugin(), me = await DeepSeekFilesMePlugin();
+  const all = {};
+  await oto.config(all);
+  await me.config(all);
+  assert.equal(oto.auth.provider, "deepseek-files-oto");
+  assert.equal(me.auth.provider, "deepseek-files-me");
+  assert.equal(all.provider["deepseek-files-oto"].name, "DeepSeek Files OTO");
+  assert.equal(all.provider["deepseek-files-me"].name, "DeepSeek Files Me");
+  await writeFile(join(s.directory, "providers.json"), JSON.stringify({ providers: [
+    { id: "deepseek", key: "one-key", responses: "https://api.deepseek.com/v1" },
+    { id: "oto", key: "oto-key", responses: "https://api.deepseek.com/v1" },
+    { id: "deepseek-me", key: "me-key", responses: "https://api.deepseek.com/v1" },
+  ] }));
+  assert.equal(await importMagpieKey(s.directory, "oto"), "oto-key");
+  assert.equal(await importMagpieKey(s.directory, "deepseek-me"), "me-key");
 });
 
 test("cache identity does not allow path traversal", async t => {
@@ -224,9 +240,12 @@ test("cache identity does not allow path traversal", async t => {
   assert.throws(() => cache.path("../private", sha256("x")), /identity/);
 });
 
-test("entry exports exactly one callable plugin for Magpie's loader", async () => {
+test("entry exports one callable plugin per routed DeepSeek account", async () => {
   const entry = await import("../index.mjs");
-  assert.deepEqual(Object.entries(entry).filter(([,value]) => typeof value === "function").map(([name])=>name), ["DeepSeekFilesPlugin"]);
+  assert.deepEqual(
+    Object.entries(entry).filter(([, value]) => typeof value === "function").map(([name]) => name),
+    ["DeepSeekFilesMePlugin", "DeepSeekFilesOtoPlugin", "DeepSeekFilesPlugin"],
+  );
 });
 
 const discoveryProvider = () => ({ id: "deepseek-files", api: "https://api.deepseek.com/v1", npm: "@ai-sdk/openai",
