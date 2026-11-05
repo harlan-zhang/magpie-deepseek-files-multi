@@ -2,6 +2,14 @@
   "name": "magpie-deepseek-files-multi",
   "version": "0.6.0",
   "description": "Native Magpie provider plugin: one DeepSeek Files provider per API key, so image uploads and inference use the routed key.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harlan-zhang/magpie-deepseek-files-multi.git"
+  },
+  "homepage": "https://github.com/harlan-zhang/magpie-deepseek-files-multi#readme",
+  "bugs": {
+    "url": "https://github.com/harlan-zhang/magpie-deepseek-files-multi/issues"
+  },
   "type": "module",
   "main": "./index.mjs",
   "exports": "./index.mjs",
@@ -31,7 +39,7 @@
   "license": "MIT",
   "magpie": {
     "hooks": "./src/opencode.hooks.mjs",
-    "icon": "https://raw.githubusercontent.com/disturbwe/magpie-deepseek-files/main/assets/deepseek.svg"
+    "icon": "https://raw.githubusercontent.com/harlan-zhang/magpie-deepseek-files-multi/main/assets/deepseek.svg"
   },
   "dependencies": {
     "sharp": "0.35.5"

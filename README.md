@@ -23,7 +23,7 @@ Magpie 原生提供商插件：将内联图片上传至 DeepSeek Files API，缓
 需要支持 OpenCode 提供商插件的 Magpie。已在 Windows Magpie **0.1.1282**、Bun **1.4.3** 中验证。
 
 ```sh
-magpie plugin add /path/to/magpie-deepseek-files-multi
+magpie plugin add github:harlan-zhang/magpie-deepseek-files-multi
 magpie plugin login deepseek-files-one
 magpie plugin login deepseek-files-oto
 magpie plugin login deepseek-files-me
@@ -95,7 +95,7 @@ magpie provider refresh deepseek-files-one
 开发安装也支持本地路径：
 
 ```sh
-git clone <this-fork-url> magpie-deepseek-files-multi
+git clone https://github.com/harlan-zhang/magpie-deepseek-files-multi.git
 magpie plugin add ./magpie-deepseek-files-multi
 ```
 
@@ -192,7 +192,7 @@ node scripts/gateway-smoke.mjs --rollout /path/to/local-rollout.jsonl
 
 ```sh
 magpie plugin update
-magpie plugin rm /path/to/magpie-deepseek-files-multi
+magpie plugin rm github:harlan-zhang/magpie-deepseek-files-multi
 ```
 
 卸载后选回原 `deepseek/deepseek-flash`。磁盘缓存可手动删除；已上传文件在设置的 7 天期限内自动过期。不要在公开 issue 中粘贴 API key、`plugin-auth.json` 或完整聊天记录。
